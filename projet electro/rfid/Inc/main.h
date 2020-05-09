@@ -51,12 +51,9 @@
 
 #define PWM_Pin GPIO_PIN_0
 #define PWM_GPIO_Port GPIOA
-#define CAPTURE_FM_Pin GPIO_PIN_1
-#define CAPTURE_FM_GPIO_Port GPIOA
-#define CAPTURE_FM_EXTI_IRQn EXTI0_1_IRQn
-#define CAPTURE_FD_Pin GPIO_PIN_4
-#define CAPTURE_FD_GPIO_Port GPIOA
-#define CAPTURE_FD_EXTI_IRQn EXTI4_15_IRQn
+#define CAPTURE_Pin GPIO_PIN_1
+#define CAPTURE_GPIO_Port GPIOA
+#define CAPTURE_EXTI_IRQn EXTI0_1_IRQn
 
 /* ########################## Assert Selection ############################## */
 /**

@@ -1,5 +1,5 @@
-main.c:214:6:SystemClock_Config	80	static
-main.c:94:5:main	88	static
-main.c:403:6:HAL_GPIO_EXTI_Callback	0	static
-main.c:422:6:HAL_TIM_PeriodElapsedCallback	0	static
-main.c:439:6:_Error_Handler	0	static
+main.c:143:6:SystemClock_Config	80	static
+main.c:93:5:main	72	static
+main.c:323:6:HAL_GPIO_EXTI_Callback	16	static
+main.c:352:6:HAL_TIM_PeriodElapsedCallback	0	static
+main.c:369:6:_Error_Handler	0	static
