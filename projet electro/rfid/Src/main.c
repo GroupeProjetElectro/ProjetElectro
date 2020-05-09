@@ -51,16 +51,17 @@ TIM_HandleTypeDef htim17;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+volatile int flag_front_montant = 0;
+volatile int flag_front_descendant = 0;
 volatile int FLAG_TRAME_OK = 0;
 volatile int FLAG_HORLOGE_OK = 0;
-volatile int COUNT_FRONT = 0;
+volatile int COUNT_DONNEES_DEBUT = 0;
+volatile int COUNT_DONNEES_FIN = 0;
 volatile int NB_US = 0;
-volatile int ETAT_HOR = 0;
+volatile int TRAME[64];
 
 
 // Configurations et calibrations
-const volatile int DEBUT = 0;
-const volatile int MILIEU = 1;
 const volatile int tolerance = 5;
 
 
@@ -119,14 +120,84 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_TIM_Base_Start_IT(&htim17);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  if (flag_front_descendant == 1){
+		    flag_front_descendant = 0;
 
+			if (FLAG_HORLOGE_OK == 0){
+				TIM17->CR1 &= 0;
+
+				TIM17->CR1 |= (1<<0);
+				NVIC_EnableIRQ(TIM17_IRQn);
+			}
+			else if (FLAG_HORLOGE_OK == 1) {
+
+				if (COUNT_DONNEES_DEBUT >= 9){
+					TIM17->CR1 &= 0;
+
+					if (512 - tolerance <= NB_US && NB_US >= 512 + tolerance){
+						COUNT_DONNEES_DEBUT++;
+
+						// Remplir le tableau de donnees -- 0
+						TRAME[COUNT_DONNEES_DEBUT - 10] = 0;
+
+						COUNT_DONNEES_FIN = 0;
+					}
+					else{
+						FLAG_HORLOGE_OK = 0;
+					}
+
+
+					TIM17->CR1 |= (1<<0);
+					NVIC_EnableIRQ(TIM17_IRQn);
+
+				}
+			}
+
+	  }
+
+	  if (flag_front_montant == 1){
+		    flag_front_montant = 0;
+
+			TIM17->CR1 &= 0;
+
+			if (512 - tolerance <= NB_US && NB_US >= 512 + tolerance){
+				if (FLAG_HORLOGE_OK == 0){
+					FLAG_HORLOGE_OK = 1;
+					COUNT_DONNEES_DEBUT++;
+				}
+				else if(FLAG_HORLOGE_OK == 1){
+					COUNT_DONNEES_DEBUT++;
+
+					if (COUNT_DONNEES_DEBUT > 9){
+						// Remplir tableau de donnees -- 1
+						TRAME[COUNT_DONNEES_DEBUT - 10] = 1;
+
+						COUNT_DONNEES_DEBUT++;
+						COUNT_DONNEES_FIN++;
+
+						if (COUNT_DONNEES_FIN == 9){
+							// On traite la trame reçu
+
+							FLAG_TRAME_OK = 1;
+						}
+					}
+				}
+			}
+			else{
+				FLAG_HORLOGE_OK = 0;
+			}
+
+
+			TIM17->CR1 |= (1<<0);
+			NVIC_EnableIRQ(TIM17_IRQn);
+	  }
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
@@ -307,15 +378,24 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
-  /*Configure GPIO pin : CAPTURE_Pin */
-  GPIO_InitStruct.Pin = CAPTURE_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  /*Configure GPIO pin : CAPTURE_FM_Pin */
+  GPIO_InitStruct.Pin = CAPTURE_FM_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(CAPTURE_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(CAPTURE_FM_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : CAPTURE_FD_Pin */
+  GPIO_InitStruct.Pin = CAPTURE_FD_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(CAPTURE_FD_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI0_1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI0_1_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
 
 }
 
@@ -323,26 +403,19 @@ static void MX_GPIO_Init(void)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 
-	// Entree Capture RFID
+	// Entree Capture RFID Front Descendant
+	if(GPIO_Pin == GPIO_PIN_4)
+	{
+		flag_front_descendant = 1;
+	}
+
+	// Entree Capture RFID Front Montant
 	if(GPIO_Pin == GPIO_PIN_1)
 	{
-
-		TIM17->CR1 &= 0;
-
-		if (256 - tolerance <= NB_US && NB_US >= 256 + tolerance){
-			ETAT_HOR ^= 1;
-		}
-		else if (512 - tolerance <= NB_US && NB_US >= 512 + tolerance){
-			ETAT_HOR = MILIEU;
-			FLAG_HORLOGE_OK = 1;
-		}
-		else{
-			FLAG_HORLOGE_OK = 0;
-		}
-
-		HAL_TIM_Base_Start_IT(&htim17);
-
+		flag_front_montant = 1;
 	}
+
+
 
 }
 
